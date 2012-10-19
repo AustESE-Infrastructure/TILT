@@ -228,13 +228,14 @@ public class Region extends ArrayList<Point> implements Shape
     public Rect getBounds()
     {
         int top,left,right,bottom;
-        top = left = bottom = right = Integer.MIN_VALUE;
+        bottom = right = Integer.MIN_VALUE;
+        top = left = Integer.MAX_VALUE;
         for ( int i=0;i<size();i++ )
         {
             Point p = get( i );
-            if ( p.x > left )
+            if ( p.x < left )
                 left = p.x;
-            if ( p.y > top )
+            if ( p.y < top )
                 top = p.y;
             if ( p.y > bottom )
                 bottom = p.y;

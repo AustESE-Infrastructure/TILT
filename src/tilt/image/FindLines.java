@@ -38,7 +38,7 @@ public class FindLines
 	/** square size for localised contrast conversion from gray to B&W */
 	int SQUARE = 64;
 	/** square size for word-recognition */
-	int WORD_SQUARE = 32;
+	int wordSquare = 32;
 	/** block of pixels for line detection */
 	int BLOCK_WIDTH = 20;
 	int BLOCK_HEIGHT = 30;
@@ -81,6 +81,9 @@ public class FindLines
 		// clean and line-recognise
 		cleanImage( bw );
 		recogniseLines();
+        int lineHeight = getLineHeight();
+        wordSquare = lineHeight/3;
+        System.out.println("wordSquare="+wordSquare+" lineHeight="+lineHeight);
         drawLines();
         // prepare converted image for display
 		//image = bw.getScaledInstance(width,height, Image.SCALE_SMOOTH);
@@ -343,23 +346,23 @@ public class FindLines
 		Rectangle r = new Rectangle( x, y, xsize, ysize );
 		a.add( new Area(r) );
 		// above
-		int yValue = Math.max(y-WORD_SQUARE,0);
-		int yHeight = Math.min(WORD_SQUARE,y);
+		int yValue = Math.max(y-wordSquare,0);
+		int yHeight = Math.min(wordSquare,y);
 		if ( yHeight > 0 )
-			augmentArea( a, x, yValue, WORD_SQUARE, yHeight );
+			augmentArea( a, x, yValue, wordSquare, yHeight );
 		// below
 		yValue = y+ysize;
-		yHeight = Math.min(WORD_SQUARE,wr.getHeight()-yValue);
+		yHeight = Math.min(wordSquare,wr.getHeight()-yValue);
 		if ( yHeight > 0 )
 			augmentArea( a, x, yValue, xsize, yHeight );
 		// left
-		int xValue = Math.max(x-WORD_SQUARE,0);
+		int xValue = Math.max(x-wordSquare,0);
 		int xWidth = x-xValue;
 		if ( xWidth > 0 )
 			augmentArea( a, xValue, y, xWidth, ysize );
 		// right
 		xValue = x+xsize;
-		xWidth = Math.min(WORD_SQUARE,wr.getWidth()-xValue);
+		xWidth = Math.min(wordSquare,wr.getWidth()-xValue);
 		if ( xWidth > 0 )
 			augmentArea( a, xValue, y, xWidth, ysize );
 	}
@@ -387,19 +390,19 @@ public class FindLines
 			{
 				propagateRect(a, x, y, xsize, ysize );
 			}
-			else if ( xsize==WORD_SQUARE && ysize==WORD_SQUARE )
+			else if ( xsize==wordSquare && ysize==wordSquare )
 			{
 				// try subdivision
-				if ( testSmallArray(x,y,WORD_SQUARE/2,WORD_SQUARE/2) )
+				if ( testSmallArray(x,y,wordSquare/2,wordSquare/2) )
 					propagateRect(a,x,y,xsize,ysize);
-				else if ( testSmallArray(x+WORD_SQUARE/2,y,WORD_SQUARE/2,
-					WORD_SQUARE/2) )
+				else if ( testSmallArray(x+wordSquare/2,y,wordSquare/2,
+					wordSquare/2) )
 					propagateRect(a,x,y,xsize,ysize);
-				else if ( testSmallArray(x,y+WORD_SQUARE/2,WORD_SQUARE/2,
-					WORD_SQUARE/2) )
+				else if ( testSmallArray(x,y+wordSquare/2,wordSquare/2,
+					wordSquare/2) )
 					propagateRect(a,x,y,xsize,ysize);
-				else if ( testSmallArray(x+WORD_SQUARE/2,y+WORD_SQUARE/2,
-					WORD_SQUARE/2, WORD_SQUARE/2) )
+				else if ( testSmallArray(x+wordSquare/2,y+wordSquare/2,
+					wordSquare/2, wordSquare/2) )
 					propagateRect(a,x,y,xsize,ysize);					
 			}
 		}
@@ -455,6 +458,12 @@ public class FindLines
 			{
 				Point p = hull.get( i );
 				poly.addPoint( p.x, p.y );
+                if ( i==hull.size()-1 )
+                {
+                    // join back to start
+                    Point q = hull.get(0);
+                    poly.addPoint( q.x,q.y );
+                }
 			}
 		}
 		return poly;
@@ -478,6 +487,7 @@ public class FindLines
      */
     public int getLineHeight()
     {
+        int top=0,bottom=0;
         int numLines = 0;
         if ( lines==null || lines.size()<=0 )
         {   
@@ -486,15 +496,23 @@ public class FindLines
             {
                 WordComponent wc = words.get(i);
                 if ( prev == null )
+                {
                     numLines = 1;
+                    top = wc.y;
+                }
                 else if ( wc.x < prev.x )
+                {
                     numLines++;
+                    bottom = wc.y;
+                }
                 prev = wc;
             }
+            // otherwise we will be one short
+            numLines++;
         }
         else
             numLines = lines.size();
-        return wr.getHeight()/numLines*2;
+        return (bottom-top)/((numLines-1)*2);
     }
     /**
      * Get the black and white image
@@ -521,8 +539,8 @@ public class FindLines
     public Shape recogniseWord( int x, int y )
     {
         Area a = new Area();
-        augmentArea( a, x, y-WORD_SQUARE/2, Math.min(WORD_SQUARE,x), 
-            Math.min(WORD_SQUARE,y) );
+        augmentArea( a, x, y-wordSquare/2, Math.min(wordSquare,x), 
+            Math.min(wordSquare,y) );
         return createAppropriateShape( a );
     }
 	/**
@@ -559,8 +577,8 @@ public class FindLines
 		{
 			Area a = new Area();
 			WordComponent wc = parent.words.get(pos++);
-			augmentArea( a, wc.x, wc.y-WORD_SQUARE/2, Math.min(WORD_SQUARE,wc.x), 
-				Math.min(WORD_SQUARE,wc.y) );
+			augmentArea( a, wc.x, wc.y-wordSquare/2, Math.min(wordSquare,wc.x), 
+				Math.min(wordSquare,wc.y) );
 			return parent.createAppropriateShape( a );
 		}
 		public void remove() throws UnsupportedOperationException
@@ -598,9 +616,9 @@ public class FindLines
 							a = new Area();
 							lines.add( a );
 						}
-						augmentArea( a, wc.x, wc.y-WORD_SQUARE/2, 
-							Math.min(WORD_SQUARE,wc.x), 
-							Math.min(WORD_SQUARE,wc.y) );
+						augmentArea( a, wc.x, wc.y-wordSquare/2, 
+							Math.min(wordSquare,wc.x), 
+							Math.min(wordSquare,wc.y) );
 						prev = wc;
 					}
 				}
