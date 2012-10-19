@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.awt.Polygon;
 import java.awt.Graphics;
 import java.awt.Point;
-import java.awt.Rectangle;
+import java.awt.geom.Area;
 /**
  * A polygon which remembers the first and last coordinates
  * @author desmond
@@ -243,5 +243,19 @@ public class Region extends ArrayList<Point> implements Shape
                 right = p.x;
         }
         return new Rect( left, top, right-left, bottom-top );
+    }
+    /**
+     * Convert to an Area
+     * @return java.awt.geom.Area
+     */
+    public Area toArea()
+    {
+        Polygon p = new Polygon();
+        for ( int i=0;i<size();i++ )
+        {
+            Point pt = get( i );
+            p.addPoint( pt.x, pt.y );
+        }
+        return new Area( p );
     }
 }

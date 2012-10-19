@@ -134,6 +134,16 @@ public class Canvas extends JPanel
                     shapes.add( current );
                 }
             }
+            else if ( mode == Mode.RECOGNISE_LINE )
+            {
+                Shape s = parent.recogniseLine( e.getX(), e.getY() );
+                if ( s != null )
+                {
+                    current = s;
+                    current.scale( parent.getScale() );
+                    shapes.add( current );
+                }
+            }
             Canvas parent = (Canvas)e.getSource();
             parent.repaint();
             parent.requestFocus();

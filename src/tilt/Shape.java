@@ -7,6 +7,7 @@ package tilt;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
+import java.awt.geom.Area;
 
 /**
  * General contract to manipulate shapes
@@ -23,4 +24,5 @@ public interface Shape
     public abstract Point pointClicked( int x, int y );
     public abstract void scale( float scale );
     public abstract Rect getBounds();
+    public abstract Area toArea();
 }

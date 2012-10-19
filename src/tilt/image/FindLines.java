@@ -563,8 +563,95 @@ public class FindLines
         // admit defeat
         return null;
     }
-    //||  )
-    // ||  )
+    /**
+     * Do a binary lookup in the words array. Words is sorted on y then on x.
+     * @param x the x-coordinate of the click nearest the wc
+     * @param y the y-coordinate nearest the wc
+     * @return -1 if nothing close enough, else the wc's index
+     */
+    int findNearestWordIndex( int x, int y )
+    {
+        int top = 0;
+        int bottom = words.size()-1;
+        while ( bottom >= top )
+        {
+            int middle = (bottom+top)/2;
+            WordComponent wc = words.get( middle );
+            if ( wc.y-y >= wordSquare )
+                bottom = middle-1;
+            else if ( y-wc.y >= wordSquare )
+                top = middle+1;
+            else if ( x > wc.x+wc.length )
+                top = middle+1;
+            else if ( x < wc.x )
+                bottom = middle-1;
+            else if ( x >= wc.x && x <= wc.x+wc.length )
+                return middle;
+        }
+        // admit defeat
+        return -1;
+    }
+    /**
+     * Recognise a single line starting at a single point
+     * @param x the absolute x-coordinate
+     * @param y the absolute y-coordinate
+     * @return a Rect or Region as appropriate
+     */
+    public Shape recogniseLine( int x, int y )
+    {
+        Area a = new Area();
+        int index = findNearestWordIndex( x, y );
+        if ( index != -1 )
+        {
+            // get words previous to index
+            WordComponent prev = words.get( index );
+            int start=index;
+            if ( index > 0 )
+            {
+                for ( start=index-1;start>=0;start-- )
+                {
+                    WordComponent wc = words.get( start );
+                    if ( start == 0 )
+                        break;
+                    else if ( wc.x+wc.length > prev.x )
+                    {
+                        start = start+1;
+                        break;
+                    }
+                    else
+                        prev = wc;
+                }
+            }
+            // get words after index
+            int end=index;
+            prev = words.get( index );
+            if ( index < words.size()-1 )
+            {
+                for ( end=index+1;end<words.size();end++ )
+                {
+                    WordComponent wc = words.get( end );
+                    if ( end == words.size()-1 )
+                        break;
+                    else if ( wc.x < prev.x+prev.length )
+                    {
+                        end = end-1;
+                        break;
+                    }
+                    else
+                        prev = wc;
+                }
+            }
+            for ( int i=start;i<=end;i++ )
+            {
+                WordComponent w = words.get( i );
+                Shape s = recogniseWord( w.x, w.y );
+                if ( s != null )
+                    a.add( s.toArea() );
+            }
+            return createAppropriateShape( a );
+        }
+        return null;
+    }
     /**
      * Recognise a single word starting at a single point
      * @param x the absolute x-coordinate
@@ -657,6 +744,7 @@ public class FindLines
 							Math.min(wordSquare,wc.y), wc );
 						prev = wc;
 					}
+                    lines.add( a );
 				}
 				// now we have the lines array built
 			}

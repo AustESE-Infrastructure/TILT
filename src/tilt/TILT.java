@@ -35,7 +35,7 @@ public class TILT implements ActionListener
     File textFile;
     static final int DEFAULT_WIDTH = 250;
     static final int DEFAULT_HEIGHT = 350;
-    JButton rectButton, regionButton,bAndWButton,wordButton,linesButton,
+    JButton rectButton, regionButton,bAndWButton,wordButton,linesButton,lineButton,
         pageButton;
     JToolBar topToolBar;
     void readArgs( String[] args )
@@ -86,15 +86,17 @@ public class TILT implements ActionListener
         topToolBar.add(rectButton);
         regionButton = makeButton("Region24","REGION","Region","REGION");
         topToolBar.add(regionButton);
-        wordButton = makeButton("Word24","RECOGNISE_WORD","Word select","WORD");
+        wordButton = makeButton("WordSelect24","RECOGNISE_WORD","Word select","WORD");
         topToolBar.add(wordButton);
+        lineButton = makeButton("LineSelect24","RECOGNISE_LINE","Line select","LINE");
+        topToolBar.add(lineButton);
+        pageButton = makeButton("Page24","PAGE","Recognise page","PAGE");
+        topToolBar.add(pageButton);
         bAndWButton = makeButton("BlackWhite24","B&W","Switch to black and white","B&W");
         topToolBar.add(makeButton("Link24","LINK","Link selected region to selected text","LINK"));
         topToolBar.add(bAndWButton);
         linesButton = makeButton("AlignJustify24","LINES","Show lines","LINES");
         topToolBar.add(linesButton);
-        pageButton = makeButton("Page24","PAGE","Recognise page","PAGE");
-        topToolBar.add(pageButton);
         regionButton.setSelected(true);
         frame.add( topToolBar, BorderLayout.NORTH );
         if ( imageFile == null )
@@ -181,6 +183,8 @@ public class TILT implements ActionListener
                     regionButton.setSelected( false );
                 if ( wordButton.isSelected() )
                     wordButton.setSelected( false );
+                if ( lineButton.isSelected() )
+                    lineButton.setSelected( false );
                 switch ( mode )
                 {
                     case REGION:
@@ -191,6 +195,9 @@ public class TILT implements ActionListener
                         break;
                     case RECOGNISE_WORD:
                         wordButton.setSelected( true );
+                        break;
+                    case RECOGNISE_LINE:
+                        lineButton.setSelected( true );
                         break;
                 }
             }

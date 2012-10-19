@@ -185,6 +185,15 @@ public class ImagePanel extends JLayeredPane
         }
     }
     /**
+     * Call the page-recognition routine. Add all the generated shapes to 
+     * the canvas
+     */
+    public Shape recogniseLine( int localX, int localY )
+    {
+        return lines.recogniseLine( Math.round((float)localX/scale), 
+            Math.round((float)localY/scale));
+    }
+    /**
      * Recognise a word given the coordinates of a click in the window
      * @param localX the local X-coordinate
      * @param localY the local Y-coordinate

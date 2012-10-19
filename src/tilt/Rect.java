@@ -8,6 +8,7 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.geom.Area;
 
 /**
  * Ordinary rectangle shape, with handles
@@ -180,5 +181,13 @@ public class Rect extends Rectangle implements Shape
     public Rect getBounds()
     {
         return this;
+    }
+    /**
+     * Convert to an Area
+     * @return java.awt.geom.Area
+     */
+    public java.awt.geom.Area toArea()
+    {
+        return new Area( this );
     }
 }
