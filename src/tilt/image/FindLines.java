@@ -82,7 +82,8 @@ public class FindLines
 		cleanImage( bw );
 		recogniseLines();
         int lineHeight = getLineHeight();
-        wordSquare = lineHeight/3;
+        // ensure even
+        wordSquare = ((lineHeight/3)/2)*2;
         System.out.println("wordSquare="+wordSquare+" lineHeight="+lineHeight);
         drawLines();
         // prepare converted image for display
@@ -318,7 +319,7 @@ public class FindLines
 						if ( current == null )
 						{
 							current = new WordComponent(j, peakPos, 
-								BLOCK_WIDTH );
+                                BLOCK_WIDTH );
 							words.add( current );
 						}
 						else
@@ -339,8 +340,10 @@ public class FindLines
 	 * @param y the top coordinate of the top-left of the square 
 	 * @param xsize the width of the square in pixels
 	 * @param ysize the height of the square in pixels
+     * @param wc don't go outside the horizontal limits if wc is not null
 	 */
-	private void propagateRect( Area a, int x, int y, int xsize, int ysize )
+	private void propagateRect( Area a, int x, int y, int xsize, int ysize,
+        WordComponent wc)
 	{
 		// accept current rectangle
 		Rectangle r = new Rectangle( x, y, xsize, ysize );
@@ -349,22 +352,22 @@ public class FindLines
 		int yValue = Math.max(y-wordSquare,0);
 		int yHeight = Math.min(wordSquare,y);
 		if ( yHeight > 0 )
-			augmentArea( a, x, yValue, wordSquare, yHeight );
+			augmentArea( a, x, yValue, wordSquare, yHeight, wc );
 		// below
 		yValue = y+ysize;
 		yHeight = Math.min(wordSquare,wr.getHeight()-yValue);
 		if ( yHeight > 0 )
-			augmentArea( a, x, yValue, xsize, yHeight );
+			augmentArea( a, x, yValue, xsize, yHeight, wc );
 		// left
 		int xValue = Math.max(x-wordSquare,0);
 		int xWidth = x-xValue;
-		if ( xWidth > 0 )
-			augmentArea( a, xValue, y, xWidth, ysize );
+		if ( xWidth > 0 && (wc==null||wc.x<xValue+xWidth) )
+			augmentArea( a, xValue, y, xWidth, ysize, wc );
 		// right
 		xValue = x+xsize;
 		xWidth = Math.min(wordSquare,wr.getWidth()-xValue);
-		if ( xWidth > 0 )
-			augmentArea( a, xValue, y, xWidth, ysize );
+		if ( xWidth > 0 && (wc==null||wc.x+wc.length>xValue) )
+			augmentArea( a, xValue, y, xWidth, ysize, wc );
 	}
 	/**
 	 * Grow an area recursively, working with the wr raster
@@ -373,8 +376,10 @@ public class FindLines
 	 * @param y the top coordinate of the top-left of the square 
 	 * @param xsize the width of the square in pixels
 	 * @param ysize the height of the square in pixels
+     * @param wc don't go outside the horizontal limits if wc is not null
 	 */
-	private void augmentArea( Area a, int x, int y, int xsize, int ysize )
+	private void augmentArea( Area a, int x, int y, int xsize, int ysize, 
+        WordComponent wc )
 	{
 		Rectangle r = new Rectangle( x, y, xsize, ysize );
 		if ( !a.contains(r) )
@@ -388,22 +393,22 @@ public class FindLines
 			float areaAverage = (float)total/(float)dArray.length;
 			if ( areaAverage > average )
 			{
-				propagateRect(a, x, y, xsize, ysize );
+				propagateRect(a, x, y, xsize, ysize, wc );
 			}
 			else if ( xsize==wordSquare && ysize==wordSquare )
 			{
 				// try subdivision
 				if ( testSmallArray(x,y,wordSquare/2,wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize);
+					propagateRect(a,x,y,xsize,ysize,wc);
 				else if ( testSmallArray(x+wordSquare/2,y,wordSquare/2,
 					wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize);
+					propagateRect(a,x,y,xsize,ysize,wc);
 				else if ( testSmallArray(x,y+wordSquare/2,wordSquare/2,
 					wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize);
+					propagateRect(a,x,y,xsize,ysize,wc);
 				else if ( testSmallArray(x+wordSquare/2,y+wordSquare/2,
 					wordSquare/2, wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize);					
+					propagateRect(a,x,y,xsize,ysize,wc);					
 			}
 		}
 	}
@@ -531,6 +536,36 @@ public class FindLines
         return linesImage;
     }
     /**
+     * Do a binary lookup in the words array. Words is sorted on y then on x.
+     * @param x the x-coordinate of the click nearest the wc
+     * @param y the y-coordinate nearest the wc
+     * @return null if nothing close enough, else the wc
+     */
+    WordComponent findNearestWord( int x, int y )
+    {
+        int top = 0;
+        int bottom = words.size()-1;
+        while ( bottom >= top )
+        {
+            int middle = (bottom+top)/2;
+            WordComponent wc = words.get( middle );
+            if ( wc.y-y >= wordSquare )
+                bottom = middle-1;
+            else if ( y-wc.y >= wordSquare )
+                top = middle+1;
+            else if ( x > wc.x+wc.length )
+                top = middle+1;
+            else if ( x < wc.x )
+                bottom = middle-1;
+            else if ( x >= wc.x && x <= wc.x+wc.length )
+                return wc;
+        }
+        // admit defeat
+        return null;
+    }
+    //||  )
+    // ||  )
+    /**
      * Recognise a single word starting at a single point
      * @param x the absolute x-coordinate
      * @param y the absolute y-coordinate
@@ -539,8 +574,9 @@ public class FindLines
     public Shape recogniseWord( int x, int y )
     {
         Area a = new Area();
+        WordComponent wc = findNearestWord( x, y );
         augmentArea( a, x, y-wordSquare/2, Math.min(wordSquare,x), 
-            Math.min(wordSquare,y) );
+            Math.min(wordSquare,y), wc );
         return createAppropriateShape( a );
     }
 	/**
@@ -578,7 +614,7 @@ public class FindLines
 			Area a = new Area();
 			WordComponent wc = parent.words.get(pos++);
 			augmentArea( a, wc.x, wc.y-wordSquare/2, Math.min(wordSquare,wc.x), 
-				Math.min(wordSquare,wc.y) );
+				Math.min(wordSquare,wc.y), wc );
 			return parent.createAppropriateShape( a );
 		}
 		public void remove() throws UnsupportedOperationException
@@ -618,7 +654,7 @@ public class FindLines
 						}
 						augmentArea( a, wc.x, wc.y-wordSquare/2, 
 							Math.min(wordSquare,wc.x), 
-							Math.min(wordSquare,wc.y) );
+							Math.min(wordSquare,wc.y), wc );
 						prev = wc;
 					}
 				}
