@@ -42,12 +42,12 @@ public class TextPanel extends JEditorPane
     @Override
     public void setSize( int width, int height )
     {
-        if ( width > 0 && height > 0 )
-            this.setPreferredSize( new Dimension(width,height) );
-        else
-            super.setSize( width, height );
-        System.out.println("TextPanel: width="+this.width+" height="+this.height);
+        super.setSize( width, height );
         this.width = width;
         this.height = height;
+    }
+    public Dimension getPreferredSize()
+    {
+        return new Dimension( width, height );
     }
 }

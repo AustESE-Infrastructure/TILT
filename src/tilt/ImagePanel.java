@@ -146,8 +146,6 @@ public class ImagePanel extends JLayeredPane
             image = bi.getScaledInstance( this.width, this.height, 
                 Image.SCALE_SMOOTH );
             canvas.setSize( this.width, this.height );
-            System.out.println("ImagePanel: width="+this.width+" height="+this.height);
-            canvas.setPreferredSize( new Dimension(this.width, this.height) );
             // prioritise image hight, preserve aspect ratio
             scale = (float)this.height/(float)bi.getHeight();
             //System.out.println("scale="+scale);
