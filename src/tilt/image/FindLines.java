@@ -1,17 +1,13 @@
 package tilt.image;
 import java.util.ArrayList;
-import java.io.FileOutputStream;
 import java.awt.Dimension;
 import java.awt.Toolkit;
 import tilt.Shape;
 import tilt.Region;
 import tilt.Rect;
-import java.util.Iterator;
+import tilt.link.Links;
 import java.awt.image.BufferedImage;
 import java.awt.geom.PathIterator;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.ImageIcon;
 import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.image.*;
@@ -54,17 +50,16 @@ public class FindLines
 	int averageV;
 	/** updateable raster for B&W image */
 	WritableRaster wr;
-	/** list of recognised words */
-	ArrayList<WordComponent> words;
-	/** list of recognised lines */
-	ArrayList<Area> lines;
+    /** bases of where words could be */
+    ArrayList<WordBase> bases;
+    /** links to text */
+    Links links;
 	/**
 	 * Create a find-lines object and manage the recognition process. 
 	 * @param bi an already loaded rgb image
 	 */
-	public FindLines( BufferedImage bi ) throws Exception
+	public FindLines( BufferedImage bi, Links links ) throws Exception
 	{
-		words = new ArrayList<WordComponent>();
 		// compute scale for display
 	    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	    scale = 1.0f;
@@ -78,58 +73,30 @@ public class FindLines
 		RescaleOp rescaleOp = new RescaleOp(1.0f, 120, null);
         linesImage = rescaleOp.filter( bw, null );
         bw = convertToBAndW( bw );
+        bases = new ArrayList<WordBase>();
 		// clean and line-recognise
 		cleanImage( bw );
-		recogniseLines();
+        recogniseLines();
         int lineHeight = getLineHeight();
         // ensure even
         wordSquare = ((lineHeight/3)/2)*2;
-        System.out.println("wordSquare="+wordSquare+" lineHeight="+lineHeight);
+        //System.out.println("wordSquare="+wordSquare+" lineHeight="+lineHeight);
         drawLines();
         // prepare converted image for display
 		//image = bw.getScaledInstance(width,height, Image.SCALE_SMOOTH);
 	}
     /**
-     * Make a faint rendition of the grayscale plus the lines
+     * Generate a faint rendition of the grayscale image plus the lines
      */
     void drawLines()
     {
         Graphics g = linesImage.getGraphics();
-        for ( int i=0;i<words.size();i++ )
+        for ( int i=0;i<bases.size();i++ )
         {
-            WordComponent wc = words.get( i );
+            WordBase wb = bases.get( i );
             g.setColor( Color.BLACK );
-            g.fillRect( wc.x, wc.y-2, wc.length, 4 );
+            g.fillRect( wb.x, wb.y-2, wb.len, 4 );
         }
-    }
-	/**
-	 * Get an iterator through recognised words
-	 * @return a Shape iterator (AWT Polygons or Rectangles)
-	 */
-	public WordIterator wordIterator()
-	{
-		return new WordIterator( this );
-	}
-	/**
-	 * Get an iterator through recognised lines
-	 * @return a Shape iterator (AWT Polygons or Rectangles)
-	 */
-	public LineIterator lineIterator()
-	{
-		return new LineIterator( this );
-	}
-	/**
-	 * Display the image for debugging
-	 * @param img a scaled image for display
-	 */
-    private void displayImage( Image img )
-    {
-        JFrame frame = new JFrame("");
-        JLabel a = new javax.swing.JLabel();
-        frame.getContentPane().add( a );
-        a.setIcon(new ImageIcon(img));
-        frame.pack();
-        frame.setVisible(true);
     }
 	/**
 	 * Convert an input RGB image to grayscale
@@ -188,27 +155,6 @@ public class FindLines
 		return gray;
 	}
 	/**
-	 * Debug: write an integer array to disk for analysis
-	 * @param array the int array
-	 * @param file the debug file name
-	 */
-	private void writeIntArray( int[] array, String file )
-	{
-		try
-		{
-			FileOutputStream fos = new FileOutputStream(file);
-			for ( int i=0;i<array.length;i++ )
-			{
-				fos.write(Integer.toString(array[i]).getBytes());
-				fos.write("\n".getBytes());
-			}
-		}
-		catch ( Exception e )
-		{
-			e.printStackTrace(System.out);
-		}
-	}
-	/**
 	 * Compute the horizontal and vertical pixel counts and the overall 
 	 * average pixel density per pixel
 	 * @param img the img to compute pixel counts for
@@ -258,7 +204,7 @@ public class FindLines
 	{
 		if ( verticals == null )
 			computePixelCounts( img );
-		// now white out pixels that have high values
+		// now white out pixels on the margin
 		int[] iArray = new int[1];
 		int xMargin = img.getWidth()*5/100;
 		int yMargin = img.getHeight()*5/100;
@@ -281,7 +227,7 @@ public class FindLines
 		}
 	}
 	/**
-	 * Recognise lines and words within lines using a prepared B&W image
+	 * Recognise lines and words within lines using the B&W image
 	 * with verticals and horizontals already computed
 	 */
 	private void recogniseLines( )
@@ -306,7 +252,7 @@ public class FindLines
 			{
 				int[] block = new int[BLOCK_HEIGHT*BLOCK_WIDTH];
 				int hLimit = horizontals.length-BLOCK_WIDTH;
-				WordComponent current = null;
+				WordBase current = null;
 				for ( int j=0;j<hLimit;j+=BLOCK_WIDTH )
 				{
 					wr.getPixels( j, peakPos-BLOCK_HEIGHT/2, BLOCK_WIDTH, 
@@ -318,12 +264,11 @@ public class FindLines
 					{
 						if ( current == null )
 						{
-							current = new WordComponent(j, peakPos, 
-                                BLOCK_WIDTH );
-							words.add( current );
+							current = new WordBase(j, peakPos, BLOCK_WIDTH );
+							bases.add( current );
 						}
 						else
-							current.length += BLOCK_WIDTH;
+							current.len += BLOCK_WIDTH;
 					}
 					else	// word-break
 						current = null;
@@ -340,10 +285,10 @@ public class FindLines
 	 * @param y the top coordinate of the top-left of the square 
 	 * @param xsize the width of the square in pixels
 	 * @param ysize the height of the square in pixels
-     * @param wc don't go outside the horizontal limits if wc is not null
+     * @param wb don't go outside the horizontal limits if wb is not null
 	 */
 	private void propagateRect( Area a, int x, int y, int xsize, int ysize,
-        WordComponent wc)
+        WordBase wb)
 	{
 		// accept current rectangle
 		Rectangle r = new Rectangle( x, y, xsize, ysize );
@@ -352,22 +297,22 @@ public class FindLines
 		int yValue = Math.max(y-wordSquare,0);
 		int yHeight = Math.min(wordSquare,y);
 		if ( yHeight > 0 )
-			augmentArea( a, x, yValue, wordSquare, yHeight, wc );
+			augmentArea( a, x, yValue, wordSquare, yHeight, wb );
 		// below
 		yValue = y+ysize;
 		yHeight = Math.min(wordSquare,wr.getHeight()-yValue);
 		if ( yHeight > 0 )
-			augmentArea( a, x, yValue, xsize, yHeight, wc );
+			augmentArea( a, x, yValue, xsize, yHeight, wb );
 		// left
 		int xValue = Math.max(x-wordSquare,0);
 		int xWidth = x-xValue;
-		if ( xWidth > 0 && (wc==null||wc.x<xValue+xWidth) )
-			augmentArea( a, xValue, y, xWidth, ysize, wc );
+		if ( xWidth > 0 && (wb==null||wb.x<xValue+xWidth) )
+			augmentArea( a, xValue, y, xWidth, ysize, wb );
 		// right
 		xValue = x+xsize;
 		xWidth = Math.min(wordSquare,wr.getWidth()-xValue);
-		if ( xWidth > 0 && (wc==null||wc.x+wc.length>xValue) )
-			augmentArea( a, xValue, y, xWidth, ysize, wc );
+		if ( xWidth > 0 && (wb==null||wb.x+wb.len>xValue) )
+			augmentArea( a, xValue, y, xWidth, ysize, wb );
 	}
 	/**
 	 * Grow an area recursively, working with the wr raster
@@ -376,10 +321,10 @@ public class FindLines
 	 * @param y the top coordinate of the top-left of the square 
 	 * @param xsize the width of the square in pixels
 	 * @param ysize the height of the square in pixels
-     * @param wc don't go outside the horizontal limits if wc is not null
+     * @param wb don't go outside the horizontal limits if wb is not null
 	 */
-	private void augmentArea( Area a, int x, int y, int xsize, int ysize, 
-        WordComponent wc )
+	void augmentArea( Area a, int x, int y, int xsize, int ysize, 
+        WordBase wb )
 	{
 		Rectangle r = new Rectangle( x, y, xsize, ysize );
 		if ( !a.contains(r) )
@@ -393,22 +338,22 @@ public class FindLines
 			float areaAverage = (float)total/(float)dArray.length;
 			if ( areaAverage > average )
 			{
-				propagateRect(a, x, y, xsize, ysize, wc );
+				propagateRect(a, x, y, xsize, ysize, wb );
 			}
 			else if ( xsize==wordSquare && ysize==wordSquare )
 			{
 				// try subdivision
 				if ( testSmallArray(x,y,wordSquare/2,wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize,wc);
+					propagateRect(a,x,y,xsize,ysize,wb);
 				else if ( testSmallArray(x+wordSquare/2,y,wordSquare/2,
 					wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize,wc);
+					propagateRect(a,x,y,xsize,ysize,wb);
 				else if ( testSmallArray(x,y+wordSquare/2,wordSquare/2,
 					wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize,wc);
+					propagateRect(a,x,y,xsize,ysize,wb);
 				else if ( testSmallArray(x+wordSquare/2,y+wordSquare/2,
 					wordSquare/2, wordSquare/2) )
-					propagateRect(a,x,y,xsize,ysize,wc);					
+					propagateRect(a,x,y,xsize,ysize,wb);					
 			}
 		}
 	}
@@ -462,12 +407,12 @@ public class FindLines
 			for ( int i=0;i<hull.size();i++ )
 			{
 				Point p = hull.get( i );
-				poly.addPoint( p.x, p.y );
+				poly.addPoint( p.x, p.y, 1.0f );
                 if ( i==hull.size()-1 )
                 {
                     // join back to start
                     Point q = hull.get(0);
-                    poly.addPoint( q.x,q.y );
+                    poly.addPoint( q.x,q.y, 1.0f );
                 }
 			}
 		}
@@ -477,7 +422,7 @@ public class FindLines
 	 * Create a Polygon or Rectangle, whichever fits best.
 	 * @param a the area already constructed
 	 */
-	Shape createAppropriateShape( Area a )
+	public Shape createAppropriateShape( Area a )
 	{
 		Region p = areaToPolygon( a );
 		Rect r = p.getBounds();
@@ -486,39 +431,6 @@ public class FindLines
 		else
 			return r;
 	}
-    /**
-     * Get the estimated line height
-     * @return an estimate of the number of lines
-     */
-    public int getLineHeight()
-    {
-        int top=0,bottom=0;
-        int numLines = 0;
-        if ( lines==null || lines.size()<=0 )
-        {   
-            WordComponent prev = null;
-            for ( int i=0;i<words.size();i++ )
-            {
-                WordComponent wc = words.get(i);
-                if ( prev == null )
-                {
-                    numLines = 1;
-                    top = wc.y;
-                }
-                else if ( wc.x < prev.x )
-                {
-                    numLines++;
-                    bottom = wc.y;
-                }
-                prev = wc;
-            }
-            // otherwise we will be one short
-            numLines++;
-        }
-        else
-            numLines = lines.size();
-        return (bottom-top)/((numLines-1)*2);
-    }
     /**
      * Get the black and white image
      * @return a buffered image
@@ -536,62 +448,6 @@ public class FindLines
         return linesImage;
     }
     /**
-     * Do a binary lookup in the words array. Words is sorted on y then on x.
-     * @param x the x-coordinate of the click nearest the wc
-     * @param y the y-coordinate nearest the wc
-     * @return null if nothing close enough, else the wc
-     */
-    WordComponent findNearestWord( int x, int y )
-    {
-        int top = 0;
-        int bottom = words.size()-1;
-        while ( bottom >= top )
-        {
-            int middle = (bottom+top)/2;
-            WordComponent wc = words.get( middle );
-            if ( wc.y-y >= wordSquare )
-                bottom = middle-1;
-            else if ( y-wc.y >= wordSquare )
-                top = middle+1;
-            else if ( x > wc.x+wc.length )
-                top = middle+1;
-            else if ( x < wc.x )
-                bottom = middle-1;
-            else if ( x >= wc.x && x <= wc.x+wc.length )
-                return wc;
-        }
-        // admit defeat
-        return null;
-    }
-    /**
-     * Do a binary lookup in the words array. Words is sorted on y then on x.
-     * @param x the x-coordinate of the click nearest the wc
-     * @param y the y-coordinate nearest the wc
-     * @return -1 if nothing close enough, else the wc's index
-     */
-    int findNearestWordIndex( int x, int y )
-    {
-        int top = 0;
-        int bottom = words.size()-1;
-        while ( bottom >= top )
-        {
-            int middle = (bottom+top)/2;
-            WordComponent wc = words.get( middle );
-            if ( wc.y-y >= wordSquare )
-                bottom = middle-1;
-            else if ( y-wc.y >= wordSquare )
-                top = middle+1;
-            else if ( x > wc.x+wc.length )
-                top = middle+1;
-            else if ( x < wc.x )
-                bottom = middle-1;
-            else if ( x >= wc.x && x <= wc.x+wc.length )
-                return middle;
-        }
-        // admit defeat
-        return -1;
-    }
-    /**
      * Recognise a single line starting at a single point
      * @param x the absolute x-coordinate
      * @param y the absolute y-coordinate
@@ -600,39 +456,39 @@ public class FindLines
     public Shape recogniseLine( int x, int y )
     {
         Area a = new Area();
-        int index = findNearestWordIndex( x, y );
-        if ( index != -1 )
+        WordBase wb = findNearestWord( x, y );
+        if ( wb.index != -1 )
         {
             // get words previous to index
-            WordComponent prev = words.get( index );
-            int start=index;
-            if ( index > 0 )
+            WordBase prev = bases.get( wb.index );
+            int start=wb.index;
+            if ( wb.index > 0 )
             {
-                for ( start=index-1;start>=0;start-- )
+                for ( start=wb.index-1;start>=0;start-- )
                 {
-                    WordComponent wc = words.get( start );
+                    WordBase wc = bases.get( start );
                     if ( start == 0 )
                         break;
-                    else if ( wc.x+wc.length > prev.x )
+                    else if ( wc.x+wc.len > prev.x )
                     {
                         start = start+1;
                         break;
                     }
                     else
-                        prev = wc;
+                        prev = wb;
                 }
             }
             // get words after index
-            int end=index;
-            prev = words.get( index );
-            if ( index < words.size()-1 )
+            int end=wb.index;
+            prev = bases.get( wb.index );
+            if ( wb.index < bases.size()-1 )
             {
-                for ( end=index+1;end<words.size();end++ )
+                for ( end=wb.index+1;end<bases.size();end++ )
                 {
-                    WordComponent wc = words.get( end );
-                    if ( end == words.size()-1 )
+                    WordBase wc = bases.get( end );
+                    if ( end == bases.size()-1 )
                         break;
-                    else if ( wc.x < prev.x+prev.length )
+                    else if ( wc.x < prev.x+prev.len )
                     {
                         end = end-1;
                         break;
@@ -643,8 +499,8 @@ public class FindLines
             }
             for ( int i=start;i<=end;i++ )
             {
-                WordComponent w = words.get( i );
-                Shape s = recogniseWord( w.x, w.y );
+                WordBase wc = bases.get( i );
+                Shape s = recogniseWord( wc.x, wc.y );
                 if ( s != null )
                     a.add( s.toArea() );
             }
@@ -661,106 +517,68 @@ public class FindLines
     public Shape recogniseWord( int x, int y )
     {
         Area a = new Area();
-        WordComponent wc = findNearestWord( x, y );
+        WordBase wb = findNearestWord( x, y );
         augmentArea( a, x, y-wordSquare/2, Math.min(wordSquare,x), 
-            Math.min(wordSquare,y), wc );
+            Math.min(wordSquare,y), wb );
         return createAppropriateShape( a );
     }
-	/**
-	 * Location of a purely horizontal line where there is a word
-	 */
-	class WordComponent
-	{
-		int x,y;
-		int length;
-		WordComponent( int x, int y, int length )
-		{
-			this.x = x;
-			this.y = y;
-			this.length = length;
-		}
-	}
-	/**
-	 * An iterator to run through recognised words and generate appropriate 
-	 * shapes from them
-	 */
-	public class WordIterator implements Iterator<Shape>
-	{
-		int pos;
-		FindLines parent;
-		public WordIterator( FindLines parent )
-		{
-			this.parent = parent;
-		}
-		public boolean hasNext() 
+        /**
+     * Get the estimated line height
+     * @return an estimate of the number of lines
+     */
+    public int getLineHeight()
+    {
+        int top=0,bottom=0;
+        int numLines = 0;
+        WordBase prev = null;
+        for ( int i=0;i<bases.size();i++ )
         {
-			return pos < parent.words.size();
-		}
-		public Shape next()
-		{
-			Area a = new Area();
-			WordComponent wc = parent.words.get(pos++);
-			augmentArea( a, wc.x, wc.y-wordSquare/2, Math.min(wordSquare,wc.x), 
-				Math.min(wordSquare,wc.y), wc );
-			return parent.createAppropriateShape( a );
-		}
-		public void remove() throws UnsupportedOperationException
-		{
-			throw new UnsupportedOperationException("remove not supported");
-		}
-	}
-	/**
-	 * An iterator to run through recognised lines and generate appropriate 
-	 * shapes from them
-	 */
-	public class LineIterator implements Iterator<Shape>
-	{
-		int pos;
-		FindLines parent;
-		/**
-		 * Create the lines on the fly and then iterate through them. Assume
-		 * they are sorted on x-position
-		 * @param parent the FindLines object to query
-		 */
-		public LineIterator( FindLines parent )
-		{
-			if ( lines == null )
-			{
-				lines = new ArrayList<Area>();
-				if ( words.size()>0 )
-				{
-					WordComponent prev = null;
-					Area a=null;
-					for ( int i=0;i<words.size();i++ )
-					{
-						WordComponent wc = words.get( i );
-						if ( prev == null || prev.x > wc.x )
-						{
-							a = new Area();
-							lines.add( a );
-						}
-						augmentArea( a, wc.x, wc.y-wordSquare/2, 
-							Math.min(wordSquare,wc.x), 
-							Math.min(wordSquare,wc.y), wc );
-						prev = wc;
-					}
-                    lines.add( a );
-				}
-				// now we have the lines array built
-			}
-			this.parent = parent;
-		}
-		public boolean hasNext() 
+            WordBase wb = bases.get(i);
+            if ( prev == null )
+            {
+                numLines = 1;
+                top = wb.y;
+            }
+            else if ( wb.x < prev.x )
+            {
+                numLines++;
+                bottom = wb.y;
+            }
+            prev = wb;
+        }
+        // otherwise we will be one short
+        numLines++;
+        return (bottom-top)/((numLines-1)*2);
+    }
+    /**
+     * Do a binary lookup in the words array. Words is sorted on y then on x.
+     * @param x the x-coordinate of the click nearest the wb
+     * @param y the y-coordinate nearest the wb
+     * @return null if nothing close enough, else the wb
+     */
+    WordBase findNearestWord( int x, int y )
+    {
+        int top = 0;
+        int bottom = bases.size()-1;
+        while ( bottom >= top )
         {
-			return pos < parent.lines.size();
-		}
-		public Shape next()
-		{
-			return parent.createAppropriateShape( parent.lines.get(pos++) );
-		}
-		public void remove() throws UnsupportedOperationException
-		{
-			throw new UnsupportedOperationException("remove not supported");
-		}
-	}
+            int middle = (bottom+top)/2;
+            WordBase wb = bases.get( middle );
+            if ( wb.y-y >= wordSquare )
+                bottom = middle-1;
+            else if ( y-wb.y >= wordSquare )
+                top = middle+1;
+            else if ( x > wb.x+wb.len )
+                top = middle+1;
+            else if ( x < wb.x )
+                bottom = middle-1;
+            else if ( x >= wb.x && x <= wb.x+wb.len )
+            {
+                wb.index = middle;
+                return wb;
+            }
+        }
+        // admit defeat
+        return null;
+    }
 }

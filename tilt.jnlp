@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jnlp spec="1.0+" codebase="" href="">
+    <information>
+        <title>Text Image Linking Tool</title>
+        <vendor>AustESE</vendor>
+    </information>
+    <resources>
+        <!-- Application Resources -->
+        <j2se version="1.6+"
+            href="http://java.sun.com/products/autodl/j2se" />
+        <jar href="TILT.jar" main="true" />
+
+    </resources>
+    <applet-desc 
+         name="Text Image Linking Tool"
+         main-class="tilt.applet.TILTApplet"
+         width="300"
+		 classloader_cache="false"
+         height="300">
+     </applet-desc>
+     <update check="background"/>
+</jnlp>

@@ -17,10 +17,12 @@ import java.awt.geom.Area;
 public class Rect extends Rectangle implements Shape
 {
     static float TRANSPARENCY_FACTOR = 0.3f;
+    int wordIndex;
+    int lineIndex;
     /**
      * Create a new Rect with no width or height
-     * @param x its x-location
-     * @param y  its y-location
+     * @param x its global x-location
+     * @param y  its global y-location
      */
     public Rect( int x, int y )
     {
@@ -28,8 +30,8 @@ public class Rect extends Rectangle implements Shape
     }
     /**
      * Create a new Rect with a given width or height
-     * @param x its x-location
-     * @param y  its y-location
+     * @param x its global x-location
+     * @param y  its global y-location
      * @param width the width of the rectangle
      * @param height the height of the rectangle
      */
@@ -38,36 +40,30 @@ public class Rect extends Rectangle implements Shape
         super( x, y, width, height );
     }
     /**
-     * Initialise from an existing java.awt.Rectangle
-     * @param r the rect in awt
-     */
-    public Rect( Rectangle r )
-    {
-        super( r.x, r.y, r.width, r.height );
-    }
-    /**
      * Was a handle on this rectangle clicked?
-     * @param x the x coordinate of the click
-     * @param y the y coordinate of the click
+     * @param x the global x coordinate of the click
+     * @param y the global y coordinate of the click
+     * @param scale the scale of the image
      * @return the handle's point if it was clicked or null
      */
-    public Point pointClicked( int x, int y )
+    public Point pointClicked( int x, int y, float scale )
     {
-        if ( Math.abs(this.x+width/2-x)<=3 && Math.abs(this.y-y)<=3 )
+        int range = Math.round(3/scale);
+        if ( Math.abs(this.x+width/2-x)<=range && Math.abs(this.y-y)<=range )
             return new Point( this.x+width/2, this.y );
-        if ( Math.abs(this.x-x)<=3 && Math.abs(this.y+height/2-y)<=3 )
+        if ( Math.abs(this.x-x)<=range && Math.abs(this.y+height/2-y)<=3 )
             return new Point( this.x,this.y/2);
-        if ( Math.abs((this.x+width/2)-x)<=3 && Math.abs(this.y+height-y)<=3 )
+        if ( Math.abs((this.x+width/2)-x)<=range && Math.abs(this.y+height-y)<=range )
             return new Point( this.x+width/2, this.y+height );
-        if ( Math.abs(this.x+width-x)<=3 && Math.abs(this.y+height/2-y)<=3 )
+        if ( Math.abs(this.x+width-x)<=range && Math.abs(this.y+height/2-y)<=range )
             return new Point( this.x+width, this.y+height/2 );
         return null;
     }
     /**
      * Move the entire rectangle from a previous point to a new point
      * @param previous the previous point of drag
-     * @param x the new x-position
-     * @param y the new y-position
+     * @param x the new global x-position
+     * @param y the new global y-position
      */
     public void translate( Point previous, int x, int y )
     {
@@ -78,8 +74,8 @@ public class Rect extends Rectangle implements Shape
     }
     /**
      * Does this shape contain a given point?
-     * @param x the x-coordinate of the click
-     * @param y the y-coordinate of the click
+     * @param x the global x-coordinate of the click
+     * @param y the global y-coordinate of the click
      * @return true if it was inside, else false
      */
     public boolean contains( int x, int y )
@@ -90,30 +86,35 @@ public class Rect extends Rectangle implements Shape
      * Paint the rectangle and fill it with a colour
      * @param g the graphics environment for drawing
      * @param colour the color to use for lines and transparent for fill
+     * @param scale the scale to draw everything in
      */
-    public void paint( Graphics g, Color colour )
+    public void paint( Graphics g, Color colour, float scale )
     {
         Color old = g.getColor();
         g.setColor( colour );
-        g.drawRect( x, y, width, height );
+        int localX = Math.round( x*scale );
+        int localY = Math.round( y*scale );
+        int localWidth = Math.round(width*scale);
+        int localHeight = Math.round(height*scale);
+        g.drawRect( localX, localY, localWidth, localHeight );
         Color fill = Utils.makeTransparent( colour, TRANSPARENCY_FACTOR );
         g.setColor( fill );
-        g.fillRect(x, y, width, height );
+        g.fillRect( localX, localY, localWidth, localHeight );
         if ( colour.equals(Utils.RED) )
         {
             g.setColor( colour );
-            g.fillRect( x+width/2-3, y-3, 6, 6 ); // top
-            g.fillRect( x-3, y+height/2-3, 6, 6 ); // left
-            g.fillRect( x+(width/2)-3, y+height-3, 6, 6 ); // bottom
-            g.fillRect( x+width-3, y+height/2-3, 6, 6 ); // right
+            g.fillRect( localX+localWidth/2-3, localY-3, 6, 6 ); // top
+            g.fillRect( localX-3, localY+localHeight/2-3, 6, 6 ); // left
+            g.fillRect( localX+(localWidth/2)-3, localY+localHeight-3, 6, 6 ); // bottom
+            g.fillRect( localX+localWidth-3, localY+localHeight/2-3, 6, 6 ); // right
         }
         g.setColor( old );
     }
     /**
      * Move the bottom right corner
-     * @param previous the previous drag-point
-     * @param x new x-coordinate
-     * @param y new y coordinate
+     * @param previous the previous global drag-point
+     * @param x new global x-coordinate
+     * @param y new global y coordinate
      */
     public void updatePoint( Point previous, int x, int y )
     {
@@ -158,21 +159,11 @@ public class Rect extends Rectangle implements Shape
      * Add a point to a rectangle
      * @param x the x coordinate
      * @param y the y coordinate
+     * @param scale the scale of the image
      */
-    public void addPoint( int x, int y )
+    public void addPoint( int x, int y, float scale )
     {
         // do nothing
-    }
-    /**
-     * Scale everything
-     * @param scale the scale to set it by
-     */
-    public void scale( float scale )
-    {
-        this.x *= scale;
-        this.y *= scale;
-        this.width *= scale;
-        this.height *= scale;
     }
     /**
      * The bounds of a rect is itself
@@ -189,5 +180,37 @@ public class Rect extends Rectangle implements Shape
     public java.awt.geom.Area toArea()
     {
         return new Area( this );
+    }
+    /**
+     * Set the index of the word in the line
+     * @param index the index of the word in the line
+     */
+    public void setWordIndex( int index )
+    {
+        wordIndex = index;
+    }
+    /**
+     * Set the index of the line we are from
+     * @param index the index of the line on the page 
+     */
+    public void setLineIndex( int index )
+    {
+        lineIndex = index;
+    }
+    /**
+     * Get the index of the word in the line
+     * @return -1 or the index 
+     */
+    public int getWordIndex()
+    {
+        return wordIndex;
+    }
+    /**
+     * Get the index of the line we are from
+     * @return -1 or the index 
+     */
+    public int getLineIndex()
+    {
+        return lineIndex;
     }
 }

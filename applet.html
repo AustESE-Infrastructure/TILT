@@ -1,0 +1,188 @@
+<html>
+<head>
+<meta charset="UTF-8">
+<script type="text/javascript">
+function getOffsetTopByElem( elem )
+{
+	var offset = 0;
+	while ( elem != null )
+	{
+		offset += elem.offsetTop;
+		elem = elem.offsetParent;
+	}
+	return offset;
+}
+function getElementHeight( elem )
+{
+	if ( elem.height )
+		return elem.height;
+	else
+		return elem.offsetHeight;
+}
+function getHeight( elem, inclBorder )
+{
+    var borderHeight = getBorderValue(elem,"border-top-width")
+            +getBorderValue(elem,"border-bottom-width");
+	if ( elem.clientHeight )
+        return (inclBorder)?borderHeight+elem.clientHeight
+			:elem.clientHeight;
+    else
+		return (inclBorder)?elem.offsetHeight
+			:elem.offsetHeight-borderHeight;
+}
+function getOffsetTop( id )
+{
+	var elem = document.getElementById(id);
+	return getOffsetTopForElem( elem );
+}
+function getOffsetTopForElem( elem )
+{
+	var offset = 0;
+	while ( elem != null )
+	{
+		offset += elem.offsetTop;
+		elem = elem.offsetParent;
+	}
+	return offset;
+}
+function getOffsetLeftForElem( elem )
+{
+	var offset = 0;
+	while ( elem != null )
+	{
+		offset += elem.offsetLeft;
+		elem = elem.offsetParent;
+	}
+	return offset;
+}
+function cssToIE( prop )
+{
+	var parts = prop.split("-");
+	if ( parts.length > 0 )
+	{
+		var ccProp = parts[0];
+		for ( var i=1;i<parts.length;i++ )
+		{
+			if ( parts[i].length > 0 )
+			{
+				ccProp += parts[i].substr(0,1).toUpperCase()
+					+parts[i].substr(1,parts[i].length-1);
+			}
+		}
+		return ccProp;
+	}
+	else
+		return prop;
+}
+function getStyleValue( elem, prop )
+{
+    var value = getStyle( elem, prop );
+    if ( value )
+        return parseInt( value );
+    else
+        return 0;
+}
+function getStyle( elem, prop )
+{
+    // test if in IE
+    if ( elem.currentStyle )
+        var y = elem.currentStyle[cssToIE(prop)];
+    else if ( window.getComputedStyle )
+        var y = window.getComputedStyle(elem,null)
+            .getPropertyValue(prop);
+    return y;
+}
+function getBorderValue( elem, prop )
+{
+    var value = getStyleValue( elem, prop );
+    var number = 0;
+    if ( value )
+    {
+        number = parseInt( value );
+        if ( isNaN(number) )
+        {
+            if ( value == "medium" )
+                number = 3;
+            else if ( value == "thick" )
+                number = 6;
+            else if ( value == "thin" )
+                number = 1;
+        }
+    }
+    return number;
+}
+function getWindowHeight()
+{
+	var myHeight = 0;
+  	if ( typeof( window.innerWidth ) == 'number' )
+	    myHeight = window.innerHeight;
+	else if ( document.documentElement
+		&& ( document.documentElement.offsetHeight ) )
+    	//IE 6+ in 'standards compliant mode'
+		myHeight = document.documentElement.offsetHeight;
+	else if ( document.body && document.body.offsetHeight )
+        // IE non-compliant mode
+		myHeight = document.body.offsetHeight;
+	return myHeight;
+}
+function getWindowWidth()
+{
+	var myWidth = 0;
+  	if ( typeof( window.innerWidth ) == 'number' )
+	    myWidth = window.innerWidth;
+	else if ( document.documentElement
+		&& ( document.documentElement.offsetWidth ) )
+    	//IE 6+ in 'standards compliant mode'
+		myWidth = document.documentElement.offsetWidth;
+	else if ( document.body && document.body.offsetWidth )
+        // IE non-compliant mode
+		myWidth = document.body.offsetWidth;
+	return myWidth;
+}
+function fitWithinParentHeight( elem )
+{
+	var topOffset = getOffsetTopForElem( elem );
+	var windowHeight = getWindowHeight();
+	// compute the height, set it
+	var vPadding = getStyleValue(elem,"padding-top")
+		+getStyleValue(elem,"padding-bottom");
+	var vBorder = getBorderValue(elem,"border-top-width")
+		+getBorderValue(elem,"border-bottom-width");
+	return windowHeight-(topOffset+vPadding+vBorder);
+}
+function fitWithinParentWidth( elem )
+{
+	var leftOffset = getOffsetLeftForElem( elem );
+	var windowWidth = getWindowWidth();
+	// compute the width, set it
+	var hPadding = getStyleValue(elem,"padding-left")
+		+getStyleValue(elem,"padding-right");
+	var hBorder = getBorderValue(elem,"border-left-width")
+		+getBorderValue(elem,"border-right-width");
+	return windowWidth-(leftOffset+hPadding+hBorder);
+}
+function resizeApplet()
+{
+	var applet = document.getElementById("TILT");
+	var height = fitWithinParentHeight( applet );
+	var width = fitWithinParentWidth( applet );
+	TILT.setSize( width, height );
+	width = TILT.getWidth();
+	height = TILT.getHeight();
+	applet.width = width;
+	applet.height = height;
+}
+</script>
+</head>
+<body>
+<noscript>A browser with JavaScript enabled is required for this page to operate properly.</noscript>
+<script src="http://www.java.com/js/deployJava.js"></script>
+<script>
+    <!-- applet id can be used to get a reference to the applet object -->
+    var attributes = { id:'TILT', code:'tilt.applet.TILTApplet',  width:600, height:300};
+    var parameters = {jnlp_href: 'tilt.jnlp'} ;
+    deployJava.runApplet(attributes, parameters, '1.6');
+	resizeApplet();
+</script>
+</body>
+</html>

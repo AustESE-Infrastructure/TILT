@@ -13,36 +13,37 @@ import java.util.ArrayList;
 import java.awt.Point;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseAdapter;
 /**
- * Transparent panel overlaying image. Handles mouse clicks, draws shapes etc.
+ * Transparent panel overlaying image. Handles mouse clicks, draws shapes etc. 
+ * Most x,y coordinates are global (image).
  * @author desmond
  */
 public class Canvas extends JPanel 
 {
-    /** width of canvas */
+    /** width of canvas LOCAL coordinates */
     int width;
-    /** height of canvas */
+    /** height of canvas LOCAL coordinates */
     int height;
     /** RECT_MODE or REGION_MODE */
     Mode mode;
     /** currently selected shape */
     Shape current;
-    /** current position of drag point */
+    /** current position of drag point, global coordinates */
     Point draggedPoint;
-    /** start of drag */
+    /** start of drag, global coordinates */
     Point dragStart;
-    /** current point of dragged shape */
+    /** current point of dragged shape, global coordinates */
     Point draggedCurrent;
-    /** array of regions and rectangles */
+    /** local copy of regions and rectangles to facilitate highlighting */
     ArrayList<Shape> shapes;
     /** parent imagepanel */
     ImagePanel parent;
     
     /**
      * Create a new canvas
-     * @param width the desired canvas width
-     * @param height the desired canvas height
+     * @param width the desired canvas width within the window
+     * @param height the desired canvas height within the window
      */
     public Canvas( int width, int height, ImagePanel parent )
     {
@@ -52,7 +53,9 @@ public class Canvas extends JPanel
         this.shapes = new ArrayList<Shape>();     
         this.setOpaque(false);
         this.setBounds(0, 0, width, height);
-        this.addMouseListener(new CanvasMouseListener());
+        CanvasMouseListener cml = new CanvasMouseListener();
+        this.addMouseListener(cml);
+        this.addMouseMotionListener( cml );
         this.addKeyListener( new KeyAdapter()
         {
             public void keyPressed( KeyEvent ke )
@@ -71,76 +74,79 @@ public class Canvas extends JPanel
                 }
             }
         });
-        this.addMouseMotionListener( new CanvasMouseMotionListener() );
     }
     /**
-     * Listen for mouse-dragged events
+     * Mouse click, mouse down, mouse up, shape select, start and end drag
      */
-    class CanvasMouseMotionListener implements MouseMotionListener
+    class CanvasMouseListener extends MouseAdapter
     {
         public void mouseDragged(MouseEvent e)
         {
+            //System.out.println("mouse dragged");
             // point on a region selected: drag it
+            float scale = parent.getScale();
+            int globalX = Math.round(e.getX()/scale);
+            int globalY = Math.round(e.getY()/scale);
             if ( draggedPoint != null )
             {
-                current.updatePoint( draggedPoint, e.getX(), e.getY() );
-                draggedPoint = new Point( e.getX(), e.getY() );
+                current.updatePoint( draggedPoint, globalX, globalY );
+                draggedPoint = new Point( globalX, globalY );
                 Canvas parent = (Canvas)e.getSource();
                 parent.repaint();
             }
             // entire shape selected
             else if ( draggedCurrent != null )
             {
-                current.translate( draggedCurrent, e.getX(), e.getY() );
-                draggedCurrent = new Point( e.getX(), e.getY() );
+                current.translate( draggedCurrent, globalX, globalY );
+                draggedCurrent = new Point( globalX, globalY );
                 Canvas parent = (Canvas)e.getSource();
                 parent.repaint();
             }
         }
         public void mouseMoved(MouseEvent e)
         {
+            super.mouseMoved(e);
         }
-    }
-    /**
-     * Mouse click, mouse down, mouse up, shape select, start and end drag
-     */
-    class CanvasMouseListener implements MouseListener
-    {
         public void mouseClicked(MouseEvent e) 
         {
-            Shape hit = getHitRegion(e.getX(),e.getY());
+            //System.out.println("mouse clicked");
+            float scale = parent.getScale();
+            int globalX = Math.round(e.getX()/scale);
+            int globalY = Math.round(e.getY()/scale);
+            Shape hit = getHitRegion(globalX,globalY);
             if ( hit != null && current != null && current.isClosed() )
                 current = hit;
             else if ( mode==Mode.REGION )
             {
                 if ( current == null || current.isClosed() )
-                    current = new Region( e.getX(), e.getY() );
+                    current = new Region( globalX, globalY, scale );
                 else 
                 {
-                    current.addPoint( e.getX(), e.getY() );
+                    current.addPoint( globalX, globalY, scale );
                     if ( current.isClosed() )
                     {
                         shapes.add( current );
+                        // set word and line index
                     }
                 }
             }
             else if ( mode == Mode.RECOGNISE_WORD )
             {
-                Shape s = parent.recogniseWord( e.getX(), e.getY() );
+                Shape s = parent.recogniseWord( globalX, globalY );
                 if ( s != null )
                 {
+                    parent.getLinks().addWordShape( s );
                     current = s;
-                    current.scale( parent.getScale() );
                     shapes.add( current );
                 }
             }
             else if ( mode == Mode.RECOGNISE_LINE )
             {
-                Shape s = parent.recogniseLine( e.getX(), e.getY() );
+                Shape s = parent.recogniseLine( globalX, globalY );
                 if ( s != null )
                 {
+                    parent.getLinks().addLineShape( s );
                     current = s;
-                    current.scale( parent.getScale() );
                     shapes.add( current );
                 }
             }
@@ -149,30 +155,47 @@ public class Canvas extends JPanel
             parent.requestFocus();
         }
         /**
+         * Create a new Rect and set it to current
+         * @param globalX the x-coordinate in the global (image) system
+         * @param globalY y-coordinate in the global (image) system
+         * @return the new displayable version of the Rect
+         */
+        private Shape createRect( int globalX, int globalY )
+        {
+            Rect r = new Rect( globalX, globalY );
+            parent.getLinks().addShape( r );
+            addShape( r );
+            draggedPoint = new Point( globalX, globalY );
+            return r;
+        }
+        /**
          * Mouse pressed down but not released yet (start of drag)
          * @param e the mouse event
          */
         public void mousePressed( MouseEvent e ) 
         {
             draggedPoint = null;
+            //System.out.println("mouse pressed");
+            float scale = parent.getScale();
+            int globalX = Math.round(e.getX()/scale);
+            int globalY = Math.round(e.getY()/scale);
+            //parent.requestFocus();
             if ( current != null )
             {
-                draggedPoint = current.pointClicked(e.getX(),e.getY());
+                draggedPoint = current.pointClicked(globalX,globalY,scale);
                 if ( draggedPoint == null )
                 {
                     // dragging an entire shape
-                    Shape r = getHitRegion( e.getX(),e.getY() );
+                    Shape r = getHitRegion( globalX,globalY );
                     if ( r != null )
                     {
                         if ( r == current )
-                            draggedCurrent = new Point(e.getX(),e.getY());
+                            draggedCurrent = new Point(globalX,globalY);
                     // else ignore attempt to drag non-selected shape
                     }
                     else if ( mode == Mode.RECTANGLE )
                     {
-                        current = new Rect( e.getX(), e.getY() );
-                        shapes.add( current );
-                        draggedPoint = new Point( e.getX(), e.getY() );
+                        current = createRect( globalX, globalY );
                         Canvas parent = (Canvas)e.getSource();
                         parent.repaint();
                         parent.requestFocus();
@@ -181,9 +204,7 @@ public class Canvas extends JPanel
             }
             else if ( mode == Mode.RECTANGLE )
             {
-                current = new Rect( e.getX(), e.getY() );
-                shapes.add( current );
-                draggedPoint = new Point( e.getX(), e.getY() );
+                current = createRect( globalX, globalY );
                 Canvas parent = (Canvas)e.getSource();
                 parent.repaint();
                 parent.requestFocus();
@@ -196,18 +217,22 @@ public class Canvas extends JPanel
         @Override
         public void mouseReleased( MouseEvent e ) 
         {
+            //System.out.println("mouse released");
             if ( current != null )
             {
+                float scale = parent.getScale();
+                int globalX = Math.round(e.getX()/scale);
+                int globalY = Math.round(e.getY()/scale);
                 if ( draggedPoint != null )
                 {
-                    current.updatePoint( draggedPoint, e.getX(), e.getY() );
+                    current.updatePoint( draggedPoint, globalX, globalY );
                     draggedPoint = null;
                     Canvas parent = (Canvas)e.getSource();
                     parent.repaint();
                 }
                 else if ( draggedCurrent != null )
                 {
-                    current.translate( draggedCurrent, e.getX(), e.getY() );
+                    current.translate( draggedCurrent, globalX, globalY );
                     draggedCurrent = null;
                     Canvas parent = (Canvas)e.getSource();
                     parent.repaint();
@@ -222,16 +247,16 @@ public class Canvas extends JPanel
         }
         /**
          * Was one of the regions clicked inside?
-         * @param x the x-coordinate of the click
-         * @param y the y-coordinate ditto
+         * @param x the global x-coordinate of the click
+         * @param y the global y-coordinate ditto
          * @return the region if it was inside one
          */
-        private Shape getHitRegion( int x, int y )
+        private Shape getHitRegion( int globalX, int globalY )
         {
             for ( int i=0;i<shapes.size();i++ )
             {
                 Shape r = shapes.get( i );
-                if ( r.contains(x,y) )
+                if ( r.contains(globalX,globalY) )
                     return r;
             }
             return null;
@@ -261,11 +286,6 @@ public class Canvas extends JPanel
     {
         if ( width>0&&height>0 )
         {
-            for ( int i=0;i<shapes.size();i++ )
-            {
-                Shape s = shapes.get( i );
-                s.scale( parent.getScale() );
-            }
             this.width = width;
             this.height = height;   
         }
@@ -282,14 +302,14 @@ public class Canvas extends JPanel
         {
             for ( int i=0;i<shapes.size();i++ )
             {
-                Shape r = shapes.get( i );
-                if ( r != current )
-                    r.paint( g, Utils.BLACK );
+                Shape s = shapes.get( i );
+                if ( s != current )
+                    s.paint( g, Utils.BLACK, parent.getScale() );
             }
         }
         // paint current even if it is not closed
         if ( current != null )
-            current.paint(g,Utils.RED);
+            current.paint(g,Utils.RED,parent.getScale());
     }
     /**
      * Set the drawing mode
@@ -298,9 +318,5 @@ public class Canvas extends JPanel
     public void setMode( Mode mode )
     {
         this.mode = mode;
-    }
-    public void printSizes()
-    {
-        System.out.println("canvas width="+width+" height="+height);
     }
 }
