@@ -108,7 +108,6 @@ public class TiltGui extends JPanel implements ActionListener
         int ht = height-topToolBar.getHeight();
         image.setSize( width/2, ht );
         Dimension dim = image.getPreferredSize();
-        JOptionPane.showMessageDialog(this,"image height="+ht+" dim.height="+dim.height);
         text.setSize( dim.width, dim.height );
     }
     @Override
