@@ -16,6 +16,7 @@ import java.awt.event.ActionListener;
 import tilt.link.Links;
 import java.awt.image.BufferedImage;
 import java.awt.Dimension;
+import javax.swing.JOptionPane;
 /**
  *
  * @author desmond
@@ -104,8 +105,10 @@ public class TiltGui extends JPanel implements ActionListener
     @Override
     public void setSize( int width, int height )
     {
-        image.setSize( width/2, height );
+        int ht = height-topToolBar.getHeight();
+        image.setSize( width/2, ht );
         Dimension dim = image.getPreferredSize();
+        JOptionPane.showMessageDialog(this,"image height="+ht+" dim.height="+dim.height);
         text.setSize( dim.width, dim.height );
     }
     @Override

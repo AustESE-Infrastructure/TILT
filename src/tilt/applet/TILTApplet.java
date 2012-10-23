@@ -67,7 +67,6 @@ public class TILTApplet extends JApplet
     {
         if ( gui != null )
         {
-            System.out.println("in TILTApplet: width="+width+" height="+height);
             gui.setSize( width, height );
         }
         else
