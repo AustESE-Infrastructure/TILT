@@ -85,10 +85,11 @@ function getStyleValue( elem, prop )
 function getStyle( elem, prop )
 {
     // test if in IE
-    if ( elem.currentStyle )
-        var y = elem.currentStyle[cssToIE(prop)];
+    var y=null;
+	if ( elem.currentStyle )
+        y = elem.currentStyle[cssToIE(prop)];
     else if ( window.getComputedStyle )
-        var y = window.getComputedStyle(elem,null)
+        y = window.getComputedStyle(elem,null)
             .getPropertyValue(prop);
     return y;
 }
@@ -166,9 +167,11 @@ function resizeApplet()
 	var applet = document.getElementById("TILT");
 	var height = fitWithinParentHeight( applet );
 	var width = fitWithinParentWidth( applet );
-	TILT.setSize( width, height );
-	width = TILT.getWidth();
-	height = TILT.getHeight();
+	if ( !applet.hasAttribute("mayscript") )
+		applet.setAttribute( "mayscript", "mayscript" );
+	applet.setSize( width, height );
+	width = applet.getWidth();
+	height = applet.getHeight();
 	applet.width = width;
 	applet.height = height;
 }

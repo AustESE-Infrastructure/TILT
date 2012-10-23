@@ -29,8 +29,11 @@ public class TILTApplet extends JApplet
                 {
                     try
                     {
-                        URL url1 = new URL("http://localhost/images/frontispiece3.jpg");
-                        URL url2 = new URL("http://localhost/texts/preface.txt");
+                        String host = getParameter("host");
+                        if ( host == null )
+                            host = "localhost";
+                        URL url1 = new URL("http://"+host+"/images/frontispiece3.jpg");
+                        URL url2 = new URL("http://"+host+"/texts/preface.txt");
                         URLReader reader = new URLReader( url2 );
                         byte[] textBytes = reader.read();
                         String text=new String( textBytes, "UTF-8" );
