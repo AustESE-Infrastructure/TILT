@@ -32,6 +32,8 @@ public class TILTApplet extends JApplet
                         String host = getParameter("host");
                         if ( host == null )
                             host = "localhost";
+                        // since this is a demo these files are hard-wired
+                        // and must be present on the server
                         URL url1 = new URL("http://"+host+"/images/frontispiece3.jpg");
                         URL url2 = new URL("http://"+host+"/texts/preface.txt");
                         URLReader reader = new URLReader( url2 );

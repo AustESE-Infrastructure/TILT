@@ -56,7 +56,8 @@ public class TextPanel extends JEditorPane
         return new Dimension( width, height );
     }
     /**
-     * Handle click events to enable selection
+     * Handle key events to enable selection. Handling them here intercepts 
+     * them and prevents editing, while enabling selection via mouse events.
      */
     private class TextKeyListener implements KeyListener
     {
