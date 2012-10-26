@@ -2,14 +2,11 @@ package tilt;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.IOException;
-import javax.imageio.ImageIO;
 import tilt.link.Links;
 import tilt.image.WordIterator;
 import javax.swing.JLayeredPane;
 import java.util.Iterator;
-import javax.swing.JOptionPane;
 import tilt.image.FindLines;
 
 /**
@@ -45,8 +42,9 @@ public class ImagePanel extends JLayeredPane
     /**
      * Create an image panel without an image file
      * @param links manages image to text selections 
+     * @param name the name of the page
      */
-    public ImagePanel( Links links ) throws Exception
+    public ImagePanel( Links links, String name ) throws Exception
     {
         this.links = links;
         bi = new BufferedImage( DEFAULT_WIDTH, DEFAULT_HEIGHT, 
@@ -63,14 +61,15 @@ public class ImagePanel extends JLayeredPane
         canvas = new Canvas( width, height, this );
         scale = 1.0f;
         this.add( canvas, new Integer(1) );
-        lines = new FindLines( bi, links );
+        lines = new FindLines( bi, links, name );
     }
     /**
      * Constructor when we have an image file
      * @param the image
      * @param links the links to the text panel
+     * @param name the name of the page
      */
-    public ImagePanel( BufferedImage bi, Links links ) 
+    public ImagePanel( BufferedImage bi, Links links, String name ) 
         throws Exception
     {
         try 
@@ -86,7 +85,7 @@ public class ImagePanel extends JLayeredPane
             image = bi.getScaledInstance(width,height, Image.SCALE_SMOOTH);
             canvas = new Canvas( width, height, this );
             this.add( canvas, new Integer(1) );
-            lines = new FindLines( bi, links );
+            lines = new FindLines( bi, links, name );
         } 
         catch (IOException ex) 
         {
@@ -225,7 +224,12 @@ public class ImagePanel extends JLayeredPane
      */
     public Shape recogniseWord( int globalX, int globalY )
     {
-        return lines.recogniseWord( globalX, globalY );
+        Shape s = lines.recogniseWord( globalX, globalY );
+        if ( s != null )
+        {
+            links.addWordShape( s );
+        }
+        return s;
     }
     /**
      * Get the Links object. Used by Canvas.

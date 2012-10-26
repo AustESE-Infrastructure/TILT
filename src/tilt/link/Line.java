@@ -52,4 +52,12 @@ public class Line extends ArrayList<Word>
         if ( state == 0 )
             add( new Word(offset,text.length()-offset) );
     }
+    /**
+     * Get the text length of this line
+     * @return an int
+     */
+    int getLen()
+    {
+        return len;
+    }
 }

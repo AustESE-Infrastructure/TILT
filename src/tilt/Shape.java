@@ -26,4 +26,5 @@ public interface Shape
     public abstract Area toArea();
     public abstract int getWordIndex();
     public abstract int getLineIndex();
+    public abstract Point getCentre();
 }

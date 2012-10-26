@@ -40,6 +40,14 @@ public class Rect extends Rectangle implements Shape
         super( x, y, width, height );
     }
     /**
+     * Compute the centre of this rectangle
+     * @return a point
+     */
+    public Point getCentre()
+    {
+        return new Point( x+width/2, y+height/2 );
+    }
+    /**
      * Was a handle on this rectangle clicked?
      * @param x the global x coordinate of the click
      * @param y the global y coordinate of the click

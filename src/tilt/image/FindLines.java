@@ -6,6 +6,7 @@ import tilt.Shape;
 import tilt.Region;
 import tilt.Rect;
 import tilt.link.Links;
+import tilt.link.WordLineIndex;
 import java.awt.image.BufferedImage;
 import java.awt.geom.PathIterator;
 import java.awt.Image;
@@ -54,12 +55,18 @@ public class FindLines
     ArrayList<WordBase> bases;
     /** links to text */
     Links links;
+    /** name of page */
+    String name;
 	/**
 	 * Create a find-lines object and manage the recognition process. 
 	 * @param bi an already loaded rgb image
+     * @param links the links object used to link images of words to the text
+     * @param name the name of the page we represent
 	 */
-	public FindLines( BufferedImage bi, Links links ) throws Exception
+	public FindLines( BufferedImage bi, Links links, String name ) 
+        throws Exception
 	{
+        this.name = name;
 		// compute scale for display
 	    Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 	    scale = 1.0f;
@@ -556,7 +563,7 @@ public class FindLines
      * @param y the y-coordinate nearest the wb
      * @return null if nothing close enough, else the wb
      */
-    WordBase findNearestWord( int x, int y )
+    public WordBase findNearestWord( int x, int y )
     {
         int top = 0;
         int bottom = bases.size()-1;
@@ -580,5 +587,64 @@ public class FindLines
         }
         // admit defeat
         return null;
+    }
+    /**
+     * Find the best line index for a given y-coordinate
+     * @param y the y image coordinate 
+     * @return the index of the line nearest to the given y value
+     */
+    public WordLineIndex getLineIndex( int y )
+    {
+        int line = 0;
+        int bestDiff = Integer.MAX_VALUE;
+        int bestLine = -1;
+        int firstWord = 0;
+        WordBase prev = null;
+        for ( int i=0;i<bases.size();i++ )
+        {
+            WordBase wb = bases.get(i);
+            int diff = Math.abs(wb.y-y);
+            if ( prev != null && wb.x < prev.x )
+            {
+                firstWord = i;
+                line++;
+            }
+            if ( diff<bestDiff )
+            {
+                bestLine = line;
+                bestDiff = diff;
+            }
+            else if ( diff > bestDiff )
+                break;
+            prev = wb;
+        }
+        return new WordLineIndex( name, bestLine, firstWord );
+    }
+    /**
+     * Get the pixel-width of the line whose first word index is given
+     * @param firstWordInLine the index of the first "word" in the line
+     * @return the white+black pixels from the start to the end of the line
+     */
+    public int getLinePixelLen( int firstWordInLine )
+    {
+        WordBase first = bases.get( firstWordInLine );
+        WordBase prev = first;
+        for ( int i=firstWordInLine+1;i<bases.size();i++ )
+        {
+            WordBase wb = bases.get( i );
+            if ( wb.x < prev.x )
+                return prev.x+prev.len - first.x;
+            prev = wb;
+        }
+        return prev.x+prev.len - first.x;
+    }
+    /**
+     * Get an array of word bases for a line
+     * @param index the index of the desired word-base
+     * @return the WordBase at that location
+     */
+    public WordBase getWordBase( int index )
+    {
+        return bases.get( index );
     }
 }

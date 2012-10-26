@@ -25,10 +25,26 @@ public class Word
         this.len = len;
     }
     /**
-     * Select a shape
-     * @param shape the shape to select
+     * Do we have an assigned shape?
+     * @return true if we do
      */
-    public void select( Shape shape )
+    public boolean hasShape()
+    {
+        return this.shape != null;
+    }
+    /**
+     * Get our shape
+     * @return the shape we have been assigned
+     */
+    public Shape getShape()
+    {
+        return this.shape;
+    }
+    /**
+     * Assign a shape to this word
+     * @param shape the shape to assign
+     */
+    public void assignShape( Shape shape )
     {
         this.shape = shape;
     }

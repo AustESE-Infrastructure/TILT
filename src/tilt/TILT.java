@@ -7,11 +7,6 @@ import tilt.link.Links;
 import javax.swing.JFrame;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.AWTEventListener;
-import java.awt.event.MouseListener;
-import java.awt.AWTEvent;
-import java.awt.Component;
-import java.awt.Toolkit;
 import java.awt.EventQueue;
 import java.io.File;
 import java.io.FileInputStream;
@@ -20,7 +15,8 @@ import java.awt.image.BufferedImage;
 
 
 /**
- * Simple desktop app or applet for creating image/text links
+ * Simple desktop app for creating image/text links. Mostly superseded now 
+ * by the applet (TILTApplet). Just used for testing.
  * @author desmond
  */
 public class TILT
@@ -60,22 +56,22 @@ public class TILT
                     {
                         bi = ImageIO.read( imageFile );
                         text = loadTextFile( textFile );            
-                        gui = new TiltGui( text, bi );
-                        frame.setContentPane( gui );
+                        gui = new TiltGui( text, bi, Utils.stripSuffix(imageFile.getName()) );
+                        frame.getContentPane().add( gui );
 //                        Toolkit.getDefaultToolkit().addAWTEventListener(new AWTEventListener() {
 //                            public void eventDispatched(AWTEvent event) {
 //                            System.out.println(event.getSource());
 //                            }
 //                        }, AWTEvent.MOUSE_EVENT_MASK);
-                        frame.addComponentListener(new ComponentAdapter() 
+                        /*frame.addComponentListener(new ComponentAdapter() 
                         {
                             public void componentResized(ComponentEvent e) 
                             {
                                 JFrame frame = ((JFrame)e.getSource());
-                                super.componentResized(e);
+                                //super.componentResized(e);
                                 frame.pack();
                             }
-                        });
+                        });*/
                         frame.pack();
                         frame.setVisible(true);
                     }

@@ -39,4 +39,18 @@ public class Utils
             return (af*100.0f)/bf;
         }
     }
+    /**
+     * Strip the suffix off a file name 
+     * @param fullName the full name including suffix if any
+     * @return name stripped of the suffix if it had one, else the fullName
+     */
+    public static String stripSuffix( String fullName )
+    {
+        int index = fullName.lastIndexOf(".");
+        if ( index > 0 )    // don't strip if it's all suffix
+            return fullName.substring(0,index);
+        else
+            return fullName;
+    }
+    
 }

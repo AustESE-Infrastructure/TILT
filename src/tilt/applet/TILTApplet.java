@@ -62,7 +62,7 @@ public class TILTApplet extends JApplet
      */
     private void createGUI( String text, BufferedImage img ) throws Exception
     {
-        gui = new TiltGui( text, img );
+        gui = new TiltGui( text, img, "frontispiece3" );
         getContentPane().add(gui, BorderLayout.CENTER);
     }
     public void setSize( int width, int height )

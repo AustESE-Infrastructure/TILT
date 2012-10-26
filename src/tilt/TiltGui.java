@@ -5,18 +5,18 @@
 package tilt;
 
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.net.URL;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JToolBar;
-import javax.swing.SwingConstants;
 import javax.swing.JPanel;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import tilt.link.Links;
 import java.awt.image.BufferedImage;
 import java.awt.Dimension;
-import javax.swing.JOptionPane;
+import tilt.link.Page;
 /**
  *
  * @author desmond
@@ -28,12 +28,13 @@ public class TiltGui extends JPanel implements ActionListener
     JButton rectButton, regionButton,bAndWButton,wordButton,linesButton,
         lineButton,pageButton;
     JToolBar topToolBar;
+    static int SLOP = 10;
     /**
      * Create a TILT GUI instance 
      * @param plainText the plain text to link to
      * @param bi the image on the LHS
      */
-    public TiltGui( String plainText, BufferedImage bi ) throws Exception
+    public TiltGui( String plainText, BufferedImage bi, String name ) throws Exception
     {
         setLayout( new BorderLayout() );
         topToolBar = new JToolBar("File Actions");
@@ -60,10 +61,23 @@ public class TiltGui extends JPanel implements ActionListener
         regionButton.setSelected(true);
         add( topToolBar, BorderLayout.NORTH );
         Links links = new Links();
-        image = new ImagePanel( bi, links );
+        Page page = new Page(name, 0);
+        links.add( page );
+        image = new ImagePanel( bi, links, name );
+        // a bit of a cheat specifying lines this way
+        page.setLines( image.lines );
         add(image, BorderLayout.WEST);
         text = new TextPanel( image.width, image.height, plainText, links);
+        links.setTextPanel( text );
         add(text, BorderLayout.EAST);
+//        Dimension dim1 = image.getPreferredSize();
+//        Dimension dim2 = topToolBar.getPreferredSize();
+//        Dimension dim3 = text.getPreferredSize();
+//        Dimension dim4 = this.getPreferredSize();
+//        System.out.println("dim1 "+dim1.width+":"+dim1.height);
+//        System.out.println("dim2 "+dim2.width+":"+dim2.height);
+//        System.out.println("dim3 "+dim3.width+":"+dim3.height);
+//        System.out.println("dim4 "+dim4.width+":"+dim4.height);
         image.setMode( Mode.REGION );
         requestFocus();
     }
@@ -115,7 +129,10 @@ public class TiltGui extends JPanel implements ActionListener
     {
         Dimension iSize = image.getPreferredSize();
         Dimension tSize = text.getPreferredSize();
-        return new Dimension(iSize.width+tSize.width,iSize.height);
+        Dimension toolbarSize = topToolBar.getPreferredSize();
+        return new Dimension( 
+            iSize.width+tSize.width+SLOP,
+            iSize.height+toolbarSize.height+SLOP );
     }
     public void actionPerformed(ActionEvent e) 
     {

@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.awt.Polygon;
 import java.awt.Graphics;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.geom.Area;
 /**
  * A polygon which remembers the first and last coordinates
@@ -56,6 +57,15 @@ public class Region extends ArrayList<Point> implements Shape
             yPoints[i] = p.y;
         }
         poly = new Polygon( xPoints, yPoints, size() );
+    }
+    /**
+     * Compute the centre of this rectangle
+     * @return a point that is the approximate centre
+     */
+    public Point getCentre()
+    {
+        Rectangle r = poly.getBounds();
+        return new Point( r.x+r.width/2, r.y+r.height/2 );
     }
     /**
      * Add a point taking note of whether this is the first

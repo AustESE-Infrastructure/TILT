@@ -3,6 +3,7 @@
  * and open the template in the editor.
  */
 package tilt;
+import java.awt.Color;
 import tilt.link.Links;
 import javax.swing.JEditorPane;
 import java.awt.Dimension;
@@ -10,8 +11,8 @@ import javax.swing.border.Border;
 import javax.swing.BorderFactory;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.Point;
-
+import javax.swing.text.DefaultHighlighter;
+import java.awt.SystemColor;
 /**
  *
  * @author desmond
@@ -22,6 +23,7 @@ public class TextPanel extends JEditorPane
     int width,height;
     JEditorPane editPane;
     Links links;
+    DefaultHighlighter.DefaultHighlightPainter highlightPainter;
     public TextPanel( int width, int height, Links links )
     {
         this.setText( DEFAULT_TEXT );
@@ -31,6 +33,11 @@ public class TextPanel extends JEditorPane
         this.setBorder( margin );
         this.links = links;
         this.addKeyListener(new TextKeyListener() );
+        DefaultHighlighter hl = new DefaultHighlighter();
+        this.setHighlighter( hl );
+        highlightPainter = new DefaultHighlighter.DefaultHighlightPainter(
+            SystemColor.textHighlight);
+        setVisible( true );
     }
     public TextPanel( int width, int height, String text, Links links )
     {
@@ -43,13 +50,27 @@ public class TextPanel extends JEditorPane
         Border margin = BorderFactory.createEmptyBorder(10,10,10,10);
         this.setBorder( margin );
         links.recalcLines(getText());
+        DefaultHighlighter hl = new DefaultHighlighter();
+        this.setHighlighter( hl );
+        highlightPainter = new DefaultHighlighter.DefaultHighlightPainter(
+            SystemColor.textHighlight);
+        setVisible( true );
+    }
+    public DefaultHighlighter.DefaultHighlightPainter getHighlightPainter()
+    {
+        return highlightPainter;
     }
     @Override
     public void setSize( int width, int height )
     {
-        super.setSize( width, height );
-        this.width = width;
-        this.height = height;
+        if ( width > 0 && height > 0 )
+        {
+            super.setSize( width, height );
+            this.width = width;
+            this.height = height;
+        }
+        else
+            super.setSize( width, height );
     }
     public Dimension getPreferredSize()
     {
